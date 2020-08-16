@@ -6,5 +6,9 @@ client.login(process.env.DISCORD_TOKEN);
 
 client.on('message', msg => {
 
+  //First need to determine what type of message I got
+  if (message.startsWith("!cough")){
+    
+  }
 
 });
