@@ -6,33 +6,38 @@ const connection = require('./connection')
 // initialize bot by connecting to the server
 client.login(process.env.DISCORD_TOKEN)
 
-client.on('message', msg => {
+client.on('message', handleMessage)
+
+async function handleMessage (msg) {
   // Find out who is making the request
   const requester = msg.author.username
-
+  let response
   // Need to determine what type of message I got
   if (msg.content.startsWith('!cough')) {
     const coughee = msg.content.replace('!cough ', '')
-    cough(requester, coughee, msg)
+    response = await cough(requester, coughee)
   } else if (msg.content.startsWith('!list')) {
-    getAllCoughsByName(requester, msg)
+    response = await getAllCoughsByName(requester)
   } else if (msg.content.startsWith('!rest')) {
-    takeARest(requester, msg)
+    response = await takeARest(requester)
   }
-})
+  if (!(typeof response === 'undefined')) {
+    msg.channel.send(response)
+  }
+}
 
-async function takeARest (requester, msg) {
+async function takeARest (requester) {
   const id = await getidByName(requester)
   const sql = 'DELETE FROM interactions WHERE cougher_id = ?'
   const resp = await connection.query(sql, id)
   if (resp === undefined || resp.warningStatus !== 0) {
     console.error(resp)
   } else {
-    msg.channel.send(requester + ' took a rest')
+    return (requester + ' took a rest')
   }
 }
 
-async function getAllCoughsByName (cougher, msg) {
+async function getAllCoughsByName (cougher) {
   const cougherId = await checkPerson(cougher, 1)
   const sql = 'SELECT coughee_id FROM interactions where cougher_id = ?'
   const resp = await connection.query(sql, [cougherId])
@@ -41,7 +46,7 @@ async function getAllCoughsByName (cougher, msg) {
     ids.push(interaction.coughee_id)
   })
   const names = await getNamesByIDs(ids)
-  msg.channel.send(cougher + ' coughed on: ' + names.join(', ') + ' today.')
+  return (cougher + ' coughed on: ' + names.join(', ') + ' today.')
 }
 
 async function getNamesByIDs (idList) {
@@ -71,7 +76,7 @@ async function checkCough (cougherId, cougheeId) {
   }
 }
 
-async function cough (cougher, coughee, msg) {
+async function cough (cougher, coughee) {
   const cougherId = await checkPerson(cougher, 1)
   const cougheeId = await checkPerson(coughee, 0)
   const beenCoughed = await checkCough(cougherId, cougheeId)
@@ -82,12 +87,12 @@ async function cough (cougher, coughee, msg) {
     const resp = await connection.query(sql, ids)
     if (resp === undefined || resp.warningStatus !== 0) {
       console.error(resp)
-      return false
+      return resp
     } else {
-      msg.channel.send(cougher + ' coughed on ' + coughee)
+      return (cougher + ' coughed on ' + coughee)
     }
   } else {
-    msg.channel.send(cougher + ' already coughed on ' + coughee)
+    return (cougher + ' already coughed on ' + coughee)
   }
 }
 
